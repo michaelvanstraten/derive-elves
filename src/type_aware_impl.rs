@@ -30,20 +30,14 @@ pub fn type_aware_impl(input: TokenStream, target_type: &DeriveInput) -> TokenSt
                 }
             }
 
-            impl_statement.to_token_stream().into()
+            impl_statement.to_token_stream()
         }
         Err(err) => err.into_compile_error(),
     }
 }
 
-fn add_type_generics(impl_type: &mut Box<Type>, target_type: &DeriveInput) {
-    let recurse = |impl_type: &mut Box<Type>| add_type_generics(impl_type, target_type);
-
-    let boxed = |not_boxed_type: &mut Type| {
-        let mut boxed_type = Box::new(not_boxed_type.clone());
-        recurse(&mut boxed_type);
-        *not_boxed_type = Box::<Type>::into_inner(boxed_type);
-    };
+fn add_type_generics(impl_type: &mut Type, target_type: &DeriveInput) {
+    let recurse = |impl_type: &mut Type| add_type_generics(impl_type, target_type);
 
     let path = |path: &mut Path| {
         if path.is_ident(&target_type.ident) {
@@ -65,13 +59,13 @@ fn add_type_generics(impl_type: &mut Box<Type>, target_type: &DeriveInput) {
             .for_each(drop)
     };
 
-    match **impl_type {
+    match *impl_type {
         syn::Type::Array(ref mut type_array) => recurse(&mut type_array.elem),
         syn::Type::BareFn(ref mut bare_fn) => {
             bare_fn
                 .inputs
                 .iter_mut()
-                .map(|argument| boxed(&mut argument.ty))
+                .map(|argument| recurse(&mut argument.ty))
                 .for_each(drop);
 
             match bare_fn.output {
@@ -92,7 +86,7 @@ fn add_type_generics(impl_type: &mut Box<Type>, target_type: &DeriveInput) {
         syn::Type::Reference(ref mut reference) => recurse(&mut reference.elem),
         syn::Type::Slice(ref mut slice) => recurse(&mut slice.elem),
         syn::Type::TraitObject(ref mut trait_object) => bounds(&mut trait_object.bounds),
-        syn::Type::Tuple(ref mut tuple) => tuple.elems.iter_mut().map(boxed).for_each(drop),
+        syn::Type::Tuple(ref mut tuple) => tuple.elems.iter_mut().map(recurse).for_each(drop),
         _ => (),
     };
 }
