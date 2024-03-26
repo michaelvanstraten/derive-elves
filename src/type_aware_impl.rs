@@ -1,11 +1,11 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 use quote::ToTokens;
-use syn::Token;
 use syn::punctuated::Punctuated;
 use syn::DeriveInput;
 use syn::ItemImpl;
 use syn::Path;
+use syn::Token;
 use syn::Type;
 use syn::TypeParamBound;
 
@@ -96,4 +96,3 @@ fn add_type_generics(impl_type: &mut Box<Type>, target_type: &DeriveInput) {
         _ => (),
     };
 }
-
